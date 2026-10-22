@@ -12,6 +12,7 @@
   --stage: #12191c;
   --stage-grid: #243035;
   --rack: #35b3a7; /* PETG */
+  --rack-other: #4c6466; /* in the cooler view, towers of the kind you aren't printing */
   --glass: #ffffff;
   --glass-edge: #e8eef0;
   --shell: #9fb7c2;
@@ -323,4 +324,94 @@ a:hover {
   margin: 0;
   color: var(--dim);
   line-height: 1.5;
+}
+
+/* the window and the print section under it */
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.section {
+  margin: 0;
+  font-size: 20px;
+  font-weight: normal;
+  line-height: 1.08;
+}
+.print {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 12px;
+}
+.print .choice .tool {
+  height: 24px;
+  font-size: 12px;
+}
+.print .choice .tool.on {
+  font-weight: bold;
+}
+/* the two files side by side, each a short list of facts */
+.files {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 560px) {
+  .files {
+    grid-template-columns: 1fr;
+  }
+}
+.files .facts dt.file {
+  grid-column: 1 / -1;
+  color: var(--fg);
+  font-weight: bold;
+}
+.sock {
+  max-width: 300px;
+}
+
+/* the main action: a full-size button filled with fg */
+.btn {
+  width: 100%;
+  height: 24px;
+  padding: 0 16px;
+  border: 1px solid var(--fg);
+  border-radius: 0;
+  background: var(--fg);
+  color: var(--bg);
+  font: bold 12px var(--mono);
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  background: var(--bg);
+  color: var(--fg);
+}
+.btn:disabled {
+  border-color: var(--faint);
+  background: var(--bg);
+  color: var(--faint);
+  cursor: default;
+}
+.btn:focus-visible,
+.link:focus-visible {
+  outline: 1px solid var(--aqua);
+  outline-offset: 2px;
+}
+/* secondary actions: plain dim text */
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font: 12px var(--mono);
+  cursor: pointer;
+}
+.link:hover:not(:disabled) {
+  color: var(--fg);
+}
+.link:disabled {
+  color: var(--faint);
+  cursor: default;
 }

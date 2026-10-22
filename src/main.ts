@@ -1,13 +1,17 @@
 import './style.css'
-import { layout } from './layout'
-import { BED, DEFAULT_COOLER, DEFAULT_MUG, SOCK, plate, rack, type Cooler, type Mug } from './rack'
-import { RackView, type ViewMode } from './view'
+import { stl, type Part } from './geometry'
+import { layout, type Layout } from './layout'
+import { loadGeometry, type Geometry } from './manifold'
+import { BED, DEFAULT_COOLER, DEFAULT_MUG, SOCK, plate, rack, type Cooler, type Mug, type Rack } from './rack'
+import { RackView, type Kind, type ViewMode } from './view'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
 const cooler: Cooler = { ...DEFAULT_COOLER }
 const mug: Mug = { ...DEFAULT_MUG }
+const fit = { socket: SOCK }
 let mode: ViewMode = 'cooler'
+let kind: Kind = 'full'
 
 // one slider per dimension, all in mm
 interface Dim<K extends string> {
@@ -34,9 +38,16 @@ const MUG_DIMS: Dim<keyof Mug>[] = [
   { key: 'handle', label: 'handle reach', min: 15, max: 70, step: 0.05 },
   { key: 'gap', label: 'gap between mugs', min: 5, max: 30, step: 0.05 },
 ]
+const SOCK_DIMS: Dim<'socket'>[] = [{ key: 'socket', label: 'post socket', min: 12.5, max: 13.3, step: 0.05 }]
+
+const KIND = {
+  full: { name: 'full rack', nx: 2, mugs: 4 },
+  half: { name: 'half rack', nx: 1, mugs: 2 },
+} as const
 
 const mm = (n: number) => n.toFixed(1)
 const num = (n: number) => String(+n.toFixed(2))
+const cm3 = (n: number) => `${Math.round(n / 1000)} cm³`
 
 // build the rows for one group; returns a function that pushes the current values back into them
 function fields<K extends string>(host: HTMLElement, group: string, dims: Dim<K>[], values: Record<K, number>): () => void {
@@ -72,49 +83,169 @@ function fields<K extends string>(host: HTMLElement, group: string, dims: Dim<K>
   return () => rows.forEach((show) => show())
 }
 
+/* ---------- geometry: the real plates, rebuilt when the mug or the socket changes ---------- */
+
+let geo: Geometry | null = null
+let plates: { key: string; full: Part; half: Part } | null = null
+let geoQueued = false
+
+function plateKey(): string {
+  return JSON.stringify([mug, fit.socket])
+}
+
+// rebuild at most once a frame, so dragging a slider doesn't queue up boolean ops
+function queueGeometry(): void {
+  if (!geo || geoQueued || plates?.key === plateKey()) return
+  geoQueued = true
+  requestAnimationFrame(() => {
+    geoQueued = false
+    if (!geo) return
+    const r = rack(mug)
+    plates = { key: plateKey(), full: geo.part(geo.plate(r, 2, 2, fit.socket)), half: geo.part(geo.plate(r, 1, 2, fit.socket)) }
+    if (view) {
+      view.setPlates(plates.full.mesh, plates.half.mesh)
+      view.build()
+    }
+    printFacts(r, layout(r, cooler))
+  })
+}
+
+/* ---------- the page ---------- */
+
 let view: RackView | null = null
 
 function update(): void {
   const r = rack(mug)
   const lay = layout(r, cooler)
-  const full = plate(r, 2, 2)
-  const half = plate(r, 1, 2)
-  const side = 2 * full.hx
+  const k = KIND[kind]
+  const p = plate(r, k.nx, 2)
   const towers = lay.full + (lay.half ? ` + ${lay.half} half` : '')
 
   $('status').textContent = (
     mode === 'cooler'
-      ? [mode, `${mm(cooler.width)} × ${mm(cooler.depth)} × ${mm(cooler.height)} mm`, `${towers} tower${lay.full + lay.half === 1 ? '' : 's'}`, `${lay.tiersFlat} tiers`, `${lay.mugs} mugs`]
-      : [mode, '2 × 2 plate', `${mm(side)} × ${mm(side)} mm`, `tier ${r.tier.toFixed(2)} mm`, `${lay.mugs} mugs fit`]
+      ? [mode, `${mm(cooler.width)} × ${mm(cooler.depth)} × ${mm(cooler.height)} mm`, `${towers} tower${lay.full + lay.half === 1 ? '' : 's'}`, `${lay.tiersFlat} tiers`, `${lay.mugs} mugs`, `printing ${k.name}`]
+      : [mode, k.name, `${k.nx} × 2 plate`, `${mm(2 * p.hx)} × ${mm(2 * p.hz)} mm`, `${p.posts.length} posts × ${r.postLen.toFixed(2)} mm`]
   ).join(' · ')
   if (view) {
     view.rack = r
     view.cooler = cooler
     view.layout = lay
+    view.kind = kind
     view.build()
   }
 
-  const bedOk = side <= BED
   const rows: [string, string, boolean?][] = [
-    ['full plate', `${mm(side)} × ${mm(side)} mm`],
-    ['half plate', `${mm(2 * half.hx)} × ${mm(2 * half.hz)} mm`],
-    ['print bed', bedOk ? `fits ${BED} mm` : `too big for ${BED} mm`, !bedOk],
     ['tier pitch', `${r.tier.toFixed(2)} mm`],
-    ['post length', `${r.postLen.toFixed(2)} mm`],
-    ['socket', `${SOCK} mm`],
     ['flat floor', `${mm(lay.flat)} mm`],
-    ['tiers', lay.tiersFlat ? String(lay.tiersFlat) + (lay.placements.some((p) => p.y > 0) ? `, ${lay.tiersHump} on the hump` : '') : 'none', !lay.tiersFlat],
+    ['tiers', lay.tiersFlat ? String(lay.tiersFlat) + (lay.placements.some((pl) => pl.y > 0) ? `, ${lay.tiersHump} on the hump` : '') : 'none', !lay.tiersFlat],
     ['room above', `${mm(lay.above)} mm`],
     ['towers', lay.full + lay.half ? towers : 'none', !(lay.full + lay.half)],
     ['mugs', String(lay.mugs), !lay.mugs],
+    ['half handles', `${mm(lay.overHalf)} mm past ends`],
   ]
-  rows.push(['half handles', `${mm(lay.overHalf)} mm past ends`])
-  $('facts').innerHTML = rows.map(([k, v, stop]) => `<dt>${k}</dt><dd class="${stop ? 'stop' : ''}">${v}</dd>`).join('')
+  $('facts').innerHTML = rows.map(([key, v, stop]) => `<dt>${key}</dt><dd class="${stop ? 'stop' : ''}">${v}</dd>`).join('')
+
+  printFacts(r, lay)
+  queueGeometry()
 }
+
+// the print section: what the two files are, how many of each this cooler needs, and the export buttons
+function printFacts(r: Rack, lay: Layout): void {
+  const k = KIND[kind]
+  const p = plate(r, k.nx, 2)
+  const w = 2 * p.hx
+  const d = 2 * p.hz
+  const n = p.posts.length
+  const mine = lay.placements.filter((pl) => pl.half === (kind === 'half'))
+  const plateCount = mine.reduce((s, pl) => s + pl.tiers, 0)
+  const setCount = mine.reduce((s, pl) => s + pl.tiers - 1, 0)
+  const part = plates?.key === plateKey() ? plates[kind] : null
+  const plateOk = Math.max(w, d) <= BED
+  const postOk = r.postLen <= BED
+
+  $('kindNote').textContent =
+    `a ${k.name} holds ${k.mugs} mugs per tier. stack plates on posts; the top plate takes no posts. ` +
+    (mine.length
+      ? `this cooler takes ${mine.length} ${k.name} tower${mine.length > 1 ? 's' : ''}: ${plateCount} plates and ${setCount} post sets.`
+      : `no ${k.name} towers fit this cooler, but you can still print one.`)
+
+  const facts = (el: string, title: string, rows: [string, string, boolean?][]) => {
+    $(el).innerHTML =
+      `<dt class="file">${title}</dt>` + rows.map(([key, v, stop]) => `<dt>${key}</dt><dd class="${stop ? 'stop' : ''}">${v}</dd>`).join('')
+  }
+  facts('plateFacts', `plate · ${k.nx} × 2`, [
+    ['size', `${mm(w)} × ${mm(d)} × 30 mm`],
+    ['print bed', plateOk ? `fits ${BED} mm` : `too big for ${BED} mm`, !plateOk],
+    ['sockets', `${n} at ${num(fit.socket)} mm`],
+    ['volume', part ? cm3(part.volume) : '…'],
+    ['for this cooler', String(plateCount)],
+  ])
+  facts('postFacts', `posts · ${n} per set`, [
+    ['each', `${r.postLen.toFixed(2)} × 12.7 × 12.7 mm`],
+    ['print bed', postOk ? `fits ${BED} mm` : `too long for ${BED} mm`, !postOk],
+    ['laid out', `${n} side by side, flat`],
+    ['volume', cm3(n * 12.7 * 12.7 * r.postLen)],
+    ['for this cooler', `${setCount} sets`],
+  ])
+
+  const ready = !!part
+  $<HTMLButtonElement>('exportBtn').disabled = !ready
+  $('exportBtn').textContent = ready ? `export ${k.name} · plate + posts (2 stl)` : geo ? 'building…' : 'loading geometry…'
+  for (const id of ['plateLink', 'postsLink', 'fitLink']) $<HTMLButtonElement>(id).disabled = !ready
+}
+
+/* ---------- export ---------- */
+
+function save(buf: ArrayBuffer, name: string): void {
+  const url = URL.createObjectURL(new Blob([buf], { type: 'model/stl' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+}
+
+function exportPlate(): void {
+  if (!plates) return
+  const k = KIND[kind]
+  const name = `mugrack-${kind}-plate-${k.nx}x2-socket${num(fit.socket)}.stl`
+  save(stl(plates[kind].mesh, name), name)
+}
+
+function exportPosts(): void {
+  if (!geo) return
+  const r = rack(mug)
+  const n = plate(r, KIND[kind].nx, 2).posts.length
+  const name = `mugrack-${kind}-posts-${n}x${r.postLen.toFixed(2)}mm.stl`
+  save(stl(geo.part(geo.posts(r.postLen, n)).mesh, name), name)
+}
+
+// sockets from 0.1 under the chosen size to 0.3 over, smallest at -x, and a short post to try in them
+function exportFitTest(): void {
+  if (!geo) return
+  const s = fit.socket
+  const sizes = [-0.1, 0, 0.1, 0.2, 0.3].map((d) => +(s + d).toFixed(2))
+  const name = `mugrack-fit-test-${sizes[0]}-to-${sizes[4]}mm.stl`
+  save(stl(geo.part(geo.fitTest(sizes)).mesh, name), name)
+}
+
+$('exportBtn').addEventListener('click', () => {
+  exportPlate()
+  // a beat between the two, so the browser treats them as two downloads rather than a burst
+  setTimeout(exportPosts, 400)
+})
+$('plateLink').addEventListener('click', exportPlate)
+$('postsLink').addEventListener('click', exportPosts)
+$('fitLink').addEventListener('click', exportFitTest)
+
+/* ---------- controls ---------- */
 
 const showCoolerDims = fields($('cooler'), 'cooler', COOLER_DIMS, cooler)
 const showHumpDims = fields($('hump'), 'cooler', HUMP_DIMS, cooler)
 const showMug = fields($('mug'), 'mug', MUG_DIMS, mug)
+const showSock = fields($('sock'), 'print', SOCK_DIMS, fit)
 
 // the hump is a toggle: off, its sliders hide but keep their values for next time
 const humpBtn = $<HTMLButtonElement>('humpBtn')
@@ -135,22 +266,32 @@ try {
   const r = rack(mug)
   view = new RackView($('view'), r, cooler, layout(r, cooler))
 } catch {
-  $('view').innerHTML = '<p class="nogl">this browser couldn\'t start webgl, so there\'s no 3D view.</p>'
+  $('view').innerHTML = '<p class="nogl">this browser couldn\'t start webgl, so there\'s no 3D view. the export still works.</p>'
 }
 
-const viewBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-view]'))
-for (const b of viewBtns) {
-  b.addEventListener('click', () => {
-    mode = b.dataset.view as ViewMode
-    for (const o of viewBtns) {
-      o.classList.toggle('on', o === b)
-      o.setAttribute('aria-pressed', String(o === b))
-    }
-    if (view) view.mode = mode
-    update()
-    view?.reset()
-  })
+function choose<T extends string>(selector: string, attr: string, set: (v: T) => void): void {
+  const btns = Array.from(document.querySelectorAll<HTMLButtonElement>(selector))
+  for (const b of btns) {
+    b.addEventListener('click', () => {
+      for (const o of btns) {
+        o.classList.toggle('on', o === b)
+        o.setAttribute('aria-pressed', String(o === b))
+      }
+      set(b.getAttribute(attr) as T)
+    })
+  }
 }
+choose<ViewMode>('[data-view]', 'data-view', (v) => {
+  mode = v
+  if (view) view.mode = mode
+  update()
+  view?.reset()
+})
+choose<Kind>('[data-kind]', 'data-kind', (v) => {
+  kind = v
+  update()
+  if (mode !== 'cooler') view?.reset()
+})
 
 const mugsBtn = $<HTMLButtonElement>('mugsBtn')
 mugsBtn.addEventListener('click', () => {
@@ -166,11 +307,23 @@ $('resetBtn').addEventListener('click', () => view?.reset())
 $('defaultsBtn').addEventListener('click', () => {
   Object.assign(cooler, DEFAULT_COOLER)
   Object.assign(mug, DEFAULT_MUG)
+  fit.socket = SOCK
   showCooler()
   showMug()
+  showSock()
   update()
 })
 
 showCooler()
 showMug()
+showSock()
 update()
+
+loadGeometry()
+  .then((g) => {
+    geo = g
+    update()
+  })
+  .catch(() => {
+    $('exportBtn').textContent = 'the geometry engine failed to load, so export is off'
+  })

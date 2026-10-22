@@ -8,13 +8,16 @@
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check": "tsx scripts/check-port.ts"
   },
   "dependencies": {
+    "manifold-3d": "^3.5.4",
     "three": "^0.170.0"
   },
   "devDependencies": {
     "@types/three": "^0.170.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^6.4.5"
   }

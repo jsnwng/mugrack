@@ -18,6 +18,7 @@
       </p>
 
       <div class="layout">
+        <div class="main">
         <!-- the rack as a window: status on top, the 3D view, a toolbar of view controls below -->
         <section class="window" aria-label="rack preview">
           <p class="titlebar" id="status">loading…</p>
@@ -32,9 +33,31 @@
             <span class="tool-sep"></span>
             <button type="button" class="tool on" id="mugsBtn" aria-pressed="true">mugs</button>
             <button type="button" class="tool" id="resetBtn">↺ reset view</button>
-            <button type="button" class="tool end" disabled title="STL export comes with the geometry port">export stl</button>
           </div>
         </section>
+
+        <!-- what gets printed: one kind of rack at a time, exported as its plate and its posts -->
+        <section class="print" aria-labelledby="printTitle">
+          <h2 class="section" id="printTitle">print</h2>
+          <div class="tool-group choice" role="group" aria-label="rack to print">
+            <button type="button" class="tool on" data-kind="full" aria-pressed="true">full rack · 2 × 2 mugs</button>
+            <button type="button" class="tool" data-kind="half" aria-pressed="false">half rack · 1 × 2 mugs</button>
+          </div>
+          <p class="note" id="kindNote"></p>
+          <div class="files">
+            <dl class="facts" id="plateFacts"></dl>
+            <dl class="facts" id="postFacts"></dl>
+          </div>
+          <div class="rows sock" id="sock"></div>
+          <p class="note">12.7 and 12.8 mm sockets hold a post tight in PETG on a Bambu P2S; 12.9 and up are loose. Other printers differ, so print the fit test first if you're unsure.</p>
+          <button type="button" class="btn" id="exportBtn" disabled>loading geometry…</button>
+          <p class="note links">
+            <button type="button" class="link" id="plateLink" disabled>plate only</button> ·
+            <button type="button" class="link" id="postsLink" disabled>posts only</button> ·
+            <button type="button" class="link" id="fitLink" disabled>socket fit test</button>
+          </p>
+        </section>
+        </div>
 
         <!-- inputs beside the window: a slider and a number box per dimension, built in main.ts -->
         <aside class="panel" aria-label="inputs">

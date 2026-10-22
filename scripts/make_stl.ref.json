@@ -1,0 +1,47 @@
+{
+  "fit_test_post_stub": {
+    "volume": 9677.4,
+    "tris": 12,
+    "size": [
+      60.0,
+      12.7,
+      12.7
+    ]
+  },
+  "fit_test_sockets": {
+    "volume": 32866.501,
+    "tris": 172,
+    "size": [
+      105.0,
+      23.0,
+      30.0
+    ]
+  },
+  "rack_plate_full_2x2": {
+    "volume": 253338.847,
+    "tris": 5704,
+    "size": [
+      213.36,
+      213.36,
+      30.0
+    ]
+  },
+  "rack_plate_half_1x2": {
+    "volume": 153638.536,
+    "tris": 4726,
+    "size": [
+      118.11,
+      213.36,
+      30.0
+    ]
+  },
+  "rack_post": {
+    "volume": 24475.757,
+    "tris": 12,
+    "size": [
+      151.75,
+      12.7,
+      12.7
+    ]
+  }
+}

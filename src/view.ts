@@ -1,11 +1,13 @@
-// Placeholder 3D view: the rack drawn from three.js primitives, sized from rack.ts. The real meshes come
-// from the manifold port; this only has to look like the rack and orbit nicely.
+// The 3D view: the printed plates from the manifold port (the same meshes the STL export writes), posts, glass
+// mugs, and the cooler around them. Everything is sized from rack.ts and placed by layout.ts.
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import type { Mesh } from './geometry'
 import type { Layout, Placement } from './layout'
-import { BAR_FRAME, BAR_LAT, BOSS, BOSS_H, IN, POST, POST_Z0, RING_H, T, plate, type Cooler, type Plate, type Rack } from './rack'
+import { IN, POST, POST_Z0, T, plate, type Cooler, type Plate, type Rack } from './rack'
 
 export type ViewMode = 'cooler' | 'module' | 'stack' | 'exploded'
+export type Kind = 'full' | 'half'
 
 const EXPLODE = 80 // how far the exploded view lifts the upper plate
 const GLASS_WALL = 2.5 // mm, the mug's wall
@@ -16,13 +18,28 @@ function token(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
+// a print-frame mesh (Z up) as a flat-shaded three.js geometry (Y up). The turn sends the plate's second axis
+// to -z; plates are symmetric across it, so mugs and posts placed from layout.ts still line up.
+function toThree(mesh: Mesh): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3))
+  g.setIndex(new THREE.BufferAttribute(mesh.indices, 1))
+  const flat = g.toNonIndexed()
+  g.dispose()
+  flat.rotateX(-Math.PI / 2)
+  flat.computeVertexNormals()
+  return flat
+}
+
 export class RackView {
   private renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
   private camera = new THREE.PerspectiveCamera(30, 1, 1, 20000)
   private controls: OrbitControls
   private root = new THREE.Group()
+  private plates: Record<Kind, THREE.BufferGeometry> | null = null
   private matRack: THREE.MeshLambertMaterial
+  private matOther: THREE.MeshLambertMaterial
   private matGlass: THREE.MeshPhongMaterial
   private matHandle: THREE.MeshPhongMaterial
   private matShell: THREE.MeshBasicMaterial
@@ -32,6 +49,7 @@ export class RackView {
   private queued = false
 
   mode: ViewMode = 'cooler'
+  kind: Kind = 'full' // the rack being printed: drawn in the module views, highlighted in the cooler
   mugs = true
 
   constructor(private host: HTMLElement, public rack: Rack, public cooler: Cooler, public layout: Layout) {
@@ -41,6 +59,7 @@ export class RackView {
 
     // the rack is solid filament, shaded by the lights rather than outlined
     this.matRack = new THREE.MeshLambertMaterial({ color: token('--rack') })
+    this.matOther = new THREE.MeshLambertMaterial({ color: token('--rack-other') })
     const glass = { color: token('--glass'), specular: 0xffffff, shininess: 90, transparent: true, depthWrite: false, side: THREE.DoubleSide }
     this.matGlass = new THREE.MeshPhongMaterial({ ...glass, opacity: 0.16 })
     this.matHandle = new THREE.MeshPhongMaterial({ ...glass, opacity: 0.4 })
@@ -75,21 +94,28 @@ export class RackView {
     this.reset()
   }
 
+  // new plate meshes from the geometry port; every tower shares these two
+  setPlates(full: Mesh, half: Mesh): void {
+    this.plates?.full.dispose()
+    this.plates?.half.dispose()
+    this.plates = { full: toThree(full), half: toThree(half) }
+  }
+
   build(): void {
     for (const child of this.root.children.splice(0)) {
       child.traverse((o) => {
-        if (o instanceof THREE.Mesh || o instanceof THREE.Line) o.geometry.dispose()
+        if ((o instanceof THREE.Mesh || o instanceof THREE.Line) && !o.userData.shared) o.geometry.dispose()
       })
     }
     if (this.mode === 'cooler') {
       this.root.add(this.shell())
       for (const pl of this.layout.placements) this.root.add(this.tower(pl))
     } else {
-      const p = plate(this.rack, 2, 2)
+      const p = plate(this.rack, this.kind === 'full' ? 2 : 1, 2)
       const tiers = this.mode === 'module' ? 1 : 2
       for (let k = 0; k < tiers; k++) {
         const lift = this.mode === 'exploded' && k > 0 ? EXPLODE : 0
-        this.root.add(this.module(p, k * this.rack.tier + lift, k < tiers - 1))
+        this.root.add(this.module(p, this.kind, k * this.rack.tier + lift, k < tiers - 1, this.matRack))
       }
     }
     this.render()
@@ -124,64 +150,42 @@ export class RackView {
     g.add(walls)
     if (hump && humpHeight > 0 && humpDepth > 0) {
       const d = Math.min(humpDepth, width)
-      const hump = new THREE.BoxGeometry(d, humpHeight, depth)
-      const m = new THREE.Mesh(hump, this.matHump)
+      const geo = new THREE.BoxGeometry(d, humpHeight, depth)
+      const m = new THREE.Mesh(geo, this.matHump)
       m.position.set(width / 2 - d / 2, humpHeight / 2, 0)
-      m.add(new THREE.LineSegments(new THREE.EdgesGeometry(hump), this.lineShell))
+      m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), this.lineShell))
       g.add(m)
     }
     return g
   }
 
   private tower(pl: Placement): THREE.Group {
+    const kind: Kind = pl.half ? 'half' : 'full'
+    const mat = kind === this.kind ? this.matRack : this.matOther
     const g = new THREE.Group()
     g.position.set(pl.x, pl.y, pl.z)
     if (pl.half) g.rotation.y = Math.PI / 2 // long side along x
     const p = plate(this.rack, pl.half ? 1 : 2, 2)
-    for (let k = 0; k < pl.tiers; k++) g.add(this.module(p, k * this.rack.tier, k < pl.tiers - 1))
+    for (let k = 0; k < pl.tiers; k++) g.add(this.module(p, kind, k * this.rack.tier, k < pl.tiers - 1, mat))
     return g
   }
 
-  // one plate with its collars and bosses, its mugs, and the posts up to the next plate
-  private module(p: Plate, y: number, withPosts: boolean): THREE.Group {
+  // one printed plate, its mugs, and the posts standing in its sockets up to the next plate
+  private module(p: Plate, kind: Kind, y: number, withPosts: boolean, mat: THREE.Material): THREE.Group {
     const g = new THREE.Group()
     g.position.y = y
-    const add = (geo: THREE.BufferGeometry, x: number, yy: number, z: number) => {
-      const m = new THREE.Mesh(geo, this.matRack)
-      m.position.set(x, yy, z)
+    if (this.plates) {
+      const m = new THREE.Mesh(this.plates[kind], mat)
+      m.userData.shared = true
       g.add(m)
     }
-    const box = (sx: number, sy: number, sz: number, x: number, z: number, y0 = 0) =>
-      add(new THREE.BoxGeometry(sx, sy, sz), x, y0 + sy / 2, z)
-
-    // frame, then the lateral bars through each mug row and the middle
-    const { hx, hz } = p
-    box(2 * hx, T, BAR_FRAME, 0, hz - BAR_FRAME / 2)
-    box(2 * hx, T, BAR_FRAME, 0, -(hz - BAR_FRAME / 2))
-    box(BAR_FRAME, T, 2 * hz - 2 * BAR_FRAME, hx - BAR_FRAME / 2, 0)
-    box(BAR_FRAME, T, 2 * hz - 2 * BAR_FRAME, -(hx - BAR_FRAME / 2), 0)
-    const bxs = p.nx % 2 === 0 ? [...p.xs, 0] : p.xs
-    const bzs = p.nz % 2 === 0 ? [...p.zs, 0] : p.zs
-    for (const x of bxs) box(BAR_LAT, T, 2 * hz - 2 * BAR_FRAME, x, 0)
-    for (const z of bzs) box(2 * hx - 2 * BAR_FRAME, T, BAR_LAT, 0, z)
-
-    // collars
-    const ring = new THREE.Shape()
-    ring.absarc(0, 0, this.rack.collarOut, 0, Math.PI * 2, false)
-    const hole = new THREE.Path()
-    hole.absarc(0, 0, this.rack.collarIn, 0, Math.PI * 2, true)
-    ring.holes.push(hole)
-    const collar = new THREE.ExtrudeGeometry(ring, { depth: RING_H, bevelEnabled: false, curveSegments: 48 })
-    collar.rotateX(-Math.PI / 2)
-    for (const x of p.xs) for (const z of p.zs) add(collar.clone(), x, 0, z)
-    collar.dispose()
-
-    // bosses, and the posts standing in their sockets
-    for (const [x, z] of p.posts) {
-      box(BOSS, BOSS_H, BOSS, x, z)
-      if (withPosts) box(POST, this.rack.postLen, POST, x, z, POST_Z0)
+    if (withPosts) {
+      for (const [x, z] of p.posts) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(POST, this.rack.postLen, POST), mat)
+        post.position.set(x, POST_Z0 + this.rack.postLen / 2, z)
+        g.add(post)
+      }
     }
-
     if (this.mugs) {
       for (const x of p.xs) {
         for (const z of p.zs) {

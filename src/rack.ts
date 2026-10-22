@@ -12,9 +12,12 @@ export const RING_H = T + COLLAR_H
 export const POST = 0.5 * IN // post square 12.7
 export const BOSS = 17.0
 export const BOSS_H = 30.0
-export const SOCK_DEPTH = 20.0
+export const SOCK_DEPTH = 20.0 // socket from boss top down (z=10..30)
+export const RECESS = 13.4 // underside recess square
 export const RECESS_D = 3.0
-export const SOCK = 12.8
+export const VENT_R = 1.25 // 2.5 mm vent hole, socket floor to recess
+export const SOCK = 12.8 // default socket; 12.7 and 12.8 are tight, 12.9 and up loose (PETG, Bambu P2S)
+export const SEG = 96 // circle segments
 export const POST_Z0 = BOSS_H - SOCK_DEPTH // a post stands on the socket floor
 
 export const BED = 256 // print bed edge, Bambu P2S
