@@ -84,6 +84,19 @@ a:hover {
   .layout {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* one column: the view, then the inputs, then what to print, so you size the rack before exporting it */
+  .layout .main {
+    display: contents;
+  }
+  .window {
+    order: 1;
+  }
+  .panel {
+    order: 2;
+  }
+  .print {
+    order: 3;
+  }
 }
 
 /* the view as a window: a thin title bar with the status above it, a player-style toolbar
