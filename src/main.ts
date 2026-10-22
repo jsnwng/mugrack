@@ -108,9 +108,7 @@ function update(): void {
     ['towers', lay.full + lay.half ? towers : 'none', !(lay.full + lay.half)],
     ['mugs', String(lay.mugs), !lay.mugs],
   ]
-  if (lay.half) {
-    rows.push(['half handles', lay.halfShort > 0 ? `${mm(lay.halfShort)} mm too long` : 'clear', lay.halfShort > 0])
-  }
+  rows.push(['half handles', `${mm(lay.overHalf)} mm past ends`])
   $('facts').innerHTML = rows.map(([k, v, stop]) => `<dt>${k}</dt><dd class="${stop ? 'stop' : ''}">${v}</dd>`).join('')
 }
 

@@ -10,6 +10,7 @@ export type ViewMode = 'cooler' | 'module' | 'stack' | 'exploded'
 const EXPLODE = 80 // how far the exploded view lifts the upper plate
 const GLASS_WALL = 2.5 // mm, the mug's wall
 const GLASS_FLOOR = 9 // mm, its heavy base
+const HANDLE_R = 5 // mm, the handle's thickness / 2
 
 function token(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -215,14 +216,16 @@ export class RackView {
     // the handle: a cubic from near the rim out to its reach and back to the wall lower down
     const yTop = height * 0.82
     const yBot = height * 0.25
-    const out = handle / 0.75 // a cubic with both controls at the same x peaks 3/4 of the way to them
+    // a cubic with both controls at the same x peaks 3/4 of the way to them; the tube's own radius makes up the
+    // rest, so the handle's outside edge lands on the measured reach
+    const out = Math.max(handle - HANDLE_R, 1) / 0.75
     const curve = new THREE.CubicBezierCurve3(
       new THREE.Vector3(wallAt(yTop) - 1, yTop, 0),
       new THREE.Vector3(wallAt(yTop) + out, yTop, 0),
       new THREE.Vector3(wallAt(yBot) + out, yBot, 0),
       new THREE.Vector3(wallAt(yBot) - 1, yBot, 0),
     )
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 5, 8, false), this.matHandle)
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, HANDLE_R, 8, false), this.matHandle)
     tube.rotation.y = Math.atan2(-dir[1], dir[0])
     g.add(tube)
     return g
