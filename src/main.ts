@@ -10,7 +10,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const cooler: Cooler = { ...DEFAULT_COOLER }
 const mug: Mug = { ...DEFAULT_MUG }
 const fit = { socket: SOCK }
-let mode: ViewMode = 'cooler'
+let mode: ViewMode = 'module'
 let kind: Kind = 'full'
 
 // one slider per dimension, all in mm

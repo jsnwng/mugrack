@@ -25,8 +25,8 @@
           <div class="view" id="view"></div>
           <div class="toolbar" id="toolbar">
             <div class="tool-group" role="group" aria-label="view">
-              <button type="button" class="tool on" data-view="cooler" aria-pressed="true">cooler</button>
-              <button type="button" class="tool" data-view="module" aria-pressed="false">module</button>
+              <button type="button" class="tool" data-view="cooler" aria-pressed="false">cooler</button>
+              <button type="button" class="tool on" data-view="module" aria-pressed="true">module</button>
               <button type="button" class="tool" data-view="stack" aria-pressed="false">stack</button>
               <button type="button" class="tool" data-view="exploded" aria-pressed="false">exploded</button>
             </div>
@@ -39,7 +39,8 @@
         <!-- what gets printed: one kind of rack at a time, exported as its plate and its posts -->
         <section class="print" aria-labelledby="printTitle">
           <h2 class="section" id="printTitle">print</h2>
-          <div class="tool-group choice" role="group" aria-label="rack to print">
+          <p class="label" id="kindLabel">choose a rack size</p>
+          <div class="tool-group choice" role="group" aria-labelledby="kindLabel">
             <button type="button" class="tool on" data-kind="full" aria-pressed="true">full rack · 2 × 2 mugs</button>
             <button type="button" class="tool" data-kind="half" aria-pressed="false">half rack · 1 × 2 mugs</button>
           </div>

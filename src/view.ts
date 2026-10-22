@@ -48,7 +48,7 @@ export class RackView {
   private lineShell: THREE.LineBasicMaterial
   private queued = false
 
-  mode: ViewMode = 'cooler'
+  mode: ViewMode = 'module'
   kind: Kind = 'full' // the rack being printed: drawn in the module views, highlighted in the cooler
   mugs = true
 

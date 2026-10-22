@@ -345,6 +345,11 @@ a:hover {
   gap: 14px;
   font-size: 12px;
 }
+/* a group's name, right above its choices */
+.print .label {
+  margin: 0 0 -8px;
+  color: var(--dim);
+}
 .print .choice .tool {
   height: 24px;
   font-size: 12px;
