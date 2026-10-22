@@ -45,18 +45,23 @@
             <button type="button" class="tool" data-kind="half" aria-pressed="false">half rack · 1 × 2 mugs</button>
           </div>
           <p class="note" id="kindNote"></p>
-          <div class="files">
-            <dl class="facts" id="plateFacts"></dl>
-            <dl class="facts" id="postFacts"></dl>
-          </div>
           <div class="rows sock" id="sock"></div>
-          <p class="note">12.7 and 12.8 mm sockets hold a post tight in PETG on a Bambu P2S; 12.9 and up are loose. Other printers differ, so print the fit test first if you're unsure.</p>
-          <button type="button" class="btn" id="exportBtn" disabled>loading geometry…</button>
-          <p class="note links">
-            <button type="button" class="link" id="plateLink" disabled>plate only</button> ·
-            <button type="button" class="link" id="postsLink" disabled>posts only</button> ·
-            <button type="button" class="link" id="fitLink" disabled>socket fit test</button>
+          <p class="note">
+            12.7 and 12.8 mm sockets hold a post tight in PETG on a Bambu P2S; 12.9 and up are loose. Other printers
+            differ, so print the <button type="button" class="link" id="fitLink" disabled>socket fit test</button> first
+            if you're unsure.
           </p>
+          <!-- one file per column, each with its own export, so the browser never sees two downloads at once -->
+          <div class="files">
+            <div class="file">
+              <dl class="facts" id="plateFacts"></dl>
+              <button type="button" class="btn" id="plateBtn" disabled>loading geometry…</button>
+            </div>
+            <div class="file">
+              <dl class="facts" id="postFacts"></dl>
+              <button type="button" class="btn" id="postsBtn" disabled>loading geometry…</button>
+            </div>
+          </div>
         </section>
         </div>
 

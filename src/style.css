@@ -368,6 +368,15 @@ a:hover {
     grid-template-columns: 1fr;
   }
 }
+.files .file {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.files .facts {
+  flex: 1;
+  align-content: start;
+}
 .files .facts dt.file {
   grid-column: 1 / -1;
   color: var(--fg);
@@ -411,6 +420,8 @@ a:hover {
   background: none;
   color: var(--dim);
   font: 12px var(--mono);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
 }
 .link:hover:not(:disabled) {

@@ -189,9 +189,10 @@ function printFacts(r: Rack, lay: Layout): void {
   ])
 
   const ready = !!part
-  $<HTMLButtonElement>('exportBtn').disabled = !ready
-  $('exportBtn').textContent = ready ? `export ${k.name} · plate + posts (2 stl)` : geo ? 'building…' : 'loading geometry…'
-  for (const id of ['plateLink', 'postsLink', 'fitLink']) $<HTMLButtonElement>(id).disabled = !ready
+  const wait = geo ? 'building…' : 'loading geometry…'
+  for (const id of ['plateBtn', 'postsBtn', 'fitLink']) $<HTMLButtonElement>(id).disabled = !ready
+  $('plateBtn').textContent = ready ? `export ${k.name} plate (stl)` : wait
+  $('postsBtn').textContent = ready ? `export ${n} posts (stl)` : wait
 }
 
 /* ---------- export ---------- */
@@ -231,13 +232,8 @@ function exportFitTest(): void {
   save(stl(geo.part(geo.fitTest(sizes)).mesh, name), name)
 }
 
-$('exportBtn').addEventListener('click', () => {
-  exportPlate()
-  // a beat between the two, so the browser treats them as two downloads rather than a burst
-  setTimeout(exportPosts, 400)
-})
-$('plateLink').addEventListener('click', exportPlate)
-$('postsLink').addEventListener('click', exportPosts)
+$('plateBtn').addEventListener('click', exportPlate)
+$('postsBtn').addEventListener('click', exportPosts)
 $('fitLink').addEventListener('click', exportFitTest)
 
 /* ---------- controls ---------- */
@@ -325,5 +321,5 @@ loadGeometry()
     update()
   })
   .catch(() => {
-    $('exportBtn').textContent = 'the geometry engine failed to load, so export is off'
+    for (const id of ['plateBtn', 'postsBtn']) $(id).textContent = "the geometry engine didn't load, so export is off"
   })
