@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Size a stackable mug rack to your cooler or freezer, preview it in 3D, and download the STL files to print it." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
+    <title>mugrack</title>
+  </head>
+  <body>
+    <main class="col wide">
+      <h1 class="title">mugrack</h1>
+
+      <p class="intro">
+        I keep glass mugs in a chest freezer, stacked on printed racks. Enter your freezer or cooler and your mug, and
+        this sizes the rack to fit, shows it, and gives you the STL files to print it.
+      </p>
+
+      <div class="layout">
+        <!-- the rack as a window: status on top, the 3D view, a toolbar of view controls below -->
+        <section class="window" aria-label="rack preview">
+          <p class="titlebar" id="status">loading…</p>
+          <div class="view" id="view"></div>
+          <div class="toolbar" id="toolbar">
+            <div class="tool-group" role="group" aria-label="view">
+              <button type="button" class="tool on" data-view="cooler" aria-pressed="true">cooler</button>
+              <button type="button" class="tool" data-view="module" aria-pressed="false">module</button>
+              <button type="button" class="tool" data-view="stack" aria-pressed="false">stack</button>
+              <button type="button" class="tool" data-view="exploded" aria-pressed="false">exploded</button>
+            </div>
+            <span class="tool-sep"></span>
+            <button type="button" class="tool on" id="mugsBtn" aria-pressed="true">mugs</button>
+            <button type="button" class="tool" id="resetBtn">↺ reset view</button>
+            <button type="button" class="tool end" disabled title="STL export comes with the geometry port">export stl</button>
+          </div>
+        </section>
+
+        <!-- inputs beside the window: a slider and a number box per dimension, built in main.ts -->
+        <aside class="panel" aria-label="inputs">
+          <fieldset class="group">
+            <legend>cooler (inside)</legend>
+            <div class="rows" id="cooler"></div>
+            <button type="button" class="tool" id="humpBtn" aria-pressed="false">compressor hump</button>
+            <div class="rows" id="hump" hidden></div>
+          </fieldset>
+
+          <fieldset class="group" id="mug">
+            <legend>mug</legend>
+          </fieldset>
+
+          <button type="button" class="tool" id="defaultsBtn">↺ my freezer and mug</button>
+
+          <fieldset class="group">
+            <legend>fit check</legend>
+            <dl class="facts" id="facts"></dl>
+          </fieldset>
+
+          <p class="note">the fit check is rough: it leaves 25 mm for frost and the lid, ignores wall taper, and packs towers by plate size, then flags handles that reach past them.</p>
+        </aside>
+      </div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

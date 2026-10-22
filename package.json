@@ -1,0 +1,21 @@
+{
+  "name": "mugrack",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A stackable mug rack you size to your cooler and print yourself.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.170.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.5"
+  }
+}
