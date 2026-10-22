@@ -7,12 +7,15 @@
   --aqua: #0b7d8a;
   --red: #c2361c;
   --mono: 'Courier New', Courier, monospace;
-  /* the 3D view's palette: for the picture only, never interface (like the pixel palette on fishbowl) */
-  --rack: #f2f2f2;
-  --glass: #7fb0cb;
-  --glass-edge: #4f8aa8;
-  --shell: #5f7a86;
-  --hump: #c3ccd0;
+  /* the 3D view's palette: for the picture only, never interface (like the pixel palette on fishbowl).
+     The view sits on its own dark stage inside the window, the way the bowl has its own water. */
+  --stage: #12191c;
+  --stage-grid: #243035;
+  --rack: #35b3a7; /* PETG */
+  --glass: #ffffff;
+  --glass-edge: #e8eef0;
+  --shell: #9fb7c2;
+  --hump: #7d8d95;
   color-scheme: light;
 }
 
@@ -105,6 +108,7 @@ a:hover {
   width: 100%;
   aspect-ratio: 4 / 3;
   overflow: hidden;
+  background: var(--stage);
   touch-action: none;
   cursor: grab;
 }
@@ -119,7 +123,7 @@ a:hover {
 .view .nogl {
   margin: 0;
   padding: 16px;
-  color: var(--dim);
+  color: #8a8a8a; /* dim, as on the dark theme */
   font-size: 12px;
 }
 .toolbar {

@@ -26,7 +26,6 @@ export class RackView {
   private matHandle: THREE.MeshPhongMaterial
   private matShell: THREE.MeshBasicMaterial
   private matHump: THREE.MeshLambertMaterial
-  private lineRack: THREE.LineBasicMaterial
   private lineGlass: THREE.LineBasicMaterial
   private lineShell: THREE.LineBasicMaterial
   private queued = false
@@ -39,25 +38,28 @@ export class RackView {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
     host.appendChild(this.renderer.domElement)
 
-    this.matRack = new THREE.MeshLambertMaterial({ color: token('--rack'), polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })
+    // the rack is solid filament, shaded by the lights rather than outlined
+    this.matRack = new THREE.MeshLambertMaterial({ color: token('--rack') })
     const glass = { color: token('--glass'), specular: 0xffffff, shininess: 90, transparent: true, depthWrite: false, side: THREE.DoubleSide }
-    this.matGlass = new THREE.MeshPhongMaterial({ ...glass, opacity: 0.3 })
-    this.matHandle = new THREE.MeshPhongMaterial({ ...glass, opacity: 0.55 })
+    this.matGlass = new THREE.MeshPhongMaterial({ ...glass, opacity: 0.16 })
+    this.matHandle = new THREE.MeshPhongMaterial({ ...glass, opacity: 0.4 })
     // the cooler is drawn from the inside only: the walls facing the camera drop away as you orbit
-    this.matShell = new THREE.MeshBasicMaterial({ color: token('--shell'), transparent: true, opacity: 0.1, side: THREE.BackSide, depthWrite: false })
+    this.matShell = new THREE.MeshBasicMaterial({ color: token('--shell'), transparent: true, opacity: 0.06, side: THREE.BackSide, depthWrite: false })
     this.matHump = new THREE.MeshLambertMaterial({ color: token('--hump') })
-    this.lineRack = new THREE.LineBasicMaterial({ color: token('--fg') })
-    this.lineGlass = new THREE.LineBasicMaterial({ color: token('--glass-edge') })
-    this.lineShell = new THREE.LineBasicMaterial({ color: token('--shell') })
+    this.lineGlass = new THREE.LineBasicMaterial({ color: token('--glass-edge'), transparent: true, opacity: 0.45 })
+    this.lineShell = new THREE.LineBasicMaterial({ color: token('--shell'), transparent: true, opacity: 0.7 })
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 1.6))
-    const key = new THREE.DirectionalLight(0xffffff, 1.4)
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x445055, 1.3))
+    const key = new THREE.DirectionalLight(0xffffff, 1.6)
     key.position.set(300, 800, 500)
     this.scene.add(key)
+    const fill = new THREE.DirectionalLight(0xffffff, 0.5)
+    fill.position.set(-500, 300, -400)
+    this.scene.add(fill)
     this.scene.add(this.root)
 
-    // a 1 in grid on the floor, in the hairline color
-    const grid = new THREE.GridHelper(48 * IN, 48, token('--faint'), token('--faint'))
+    // a 1 in grid on the floor of the stage
+    const grid = new THREE.GridHelper(48 * IN, 48, token('--stage-grid'), token('--stage-grid'))
     this.scene.add(grid)
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
@@ -146,8 +148,6 @@ export class RackView {
     const add = (geo: THREE.BufferGeometry, x: number, yy: number, z: number) => {
       const m = new THREE.Mesh(geo, this.matRack)
       m.position.set(x, yy, z)
-      const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), this.lineRack)
-      m.add(e)
       g.add(m)
     }
     const box = (sx: number, sy: number, sz: number, x: number, z: number, y0 = 0) =>
